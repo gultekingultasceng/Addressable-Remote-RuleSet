@@ -48,15 +48,29 @@ public class MyBehaviour : MonoBehaviour
     void Migrate()
     {
         if (speed == 0f && speedOld != 0) speed = speedOld;
-    <div align="center">
-
     # Addressables Prefab & Serialization — El Kitabı
 
     Güvenle değiştir, kırmadan güncelle. (Teknik terimler İngilizce, açıklamalar Türkçe)
 
-    </div>
-
     ---
+
+    ## İçindekiler
+
+    - [1) Script GUID ve .meta (Kırmızı Çizgi)](#1-script-guid-ve-meta-kırmızı-çizgi)
+    - [2) Field Rename (Veriyi Korumak)](#2-field-rename-veriyi-korumak)
+    - [3) Field Type Change (Tip Değiştirme)](#3-field-type-change-tip-değiştirme)
+    - [4) SerializeField Kaldırma (Görünmez Veri Kaybı)](#4-serializefield-kaldırma-görünmez-veri-kaybı)
+    - [5) SerializeReference (İsim Sabitliği)](#5-serializereference-isim-sabitliği)
+    - [6) UnityEvent (İmza Stabilitesi)](#6-unityevent-imza-stabilitesi)
+    - [7) Property ile Serileştirme](#7-property-ile-serileştirme)
+    - [8) Prefab Referans Hijyeni](#8-prefab-referans-hijyeni)
+    - [9) AssetReference > String Address](#9-assetreference--string-address)
+    - [10) UI Image Sprite (Runtime Restore)](#10-ui-image-sprite-runtime-restore)
+    - [11) AddressableLoader (Remote Catalog)](#11-addressableloader-remote-catalog)
+    - [12) Hızlı HTTP Servis (Yerel)](#12-hızlı-http-servis-yerel)
+    - [13) Diagnose & Verify (Ne Bundle'a Girdi?)](#13-diagnose--verify-ne-bundlea-girdi)
+    - [14) Content Update (4 Adım)](#14-content-update-4-adım)
+    - [15) Hızlı Kontrol Listesi](#15-hızlı-kontrol-listesi)
 
     ## 1) Script GUID ve .meta (Kırmızı Çizgi)
 
