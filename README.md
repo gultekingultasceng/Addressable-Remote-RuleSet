@@ -52,260 +52,132 @@ public class MyBehaviour : MonoBehaviour
 
     Güvenle değiştir, kırmadan güncelle. (Teknik terimler İngilizce, açıklamalar Türkçe)
 
-    ---
-
-    ## İçindekiler
-
-    - [1) Script GUID ve .meta (Kırmızı Çizgi)](#1-script-guid-ve-meta-kırmızı-çizgi)
-    - [2) Field Rename (Veriyi Korumak)](#2-field-rename-veriyi-korumak)
-    - [3) Field Type Change (Tip Değiştirme)](#3-field-type-change-tip-değiştirme)
-    - [4) SerializeField Kaldırma (Görünmez Veri Kaybı)](#4-serializefield-kaldırma-görünmez-veri-kaybı)
-    - [5) SerializeReference (İsim Sabitliği)](#5-serializereference-isim-sabitliği)
-    - [6) UnityEvent (İmza Stabilitesi)](#6-unityevent-imza-stabilitesi)
-    - [7) Property ile Serileştirme](#7-property-ile-serileştirme)
-    - [8) Prefab Referans Hijyeni](#8-prefab-referans-hijyeni)
-    - [9) AssetReference > String Address](#9-assetreference--string-address)
-    - [10) UI Image Sprite (Runtime Restore)](#10-ui-image-sprite-runtime-restore)
-    - [11) AddressableLoader (Remote Catalog)](#11-addressableloader-remote-catalog)
-    - [12) Hızlı HTTP Servis (Yerel)](#12-hızlı-http-servis-yerel)
-    - [13) Diagnose & Verify (Ne Bundle'a Girdi?)](#13-diagnose--verify-ne-bundlea-girdi)
-    - [14) Content Update (4 Adım)](#14-content-update-4-adım)
-    - [15) Hızlı Kontrol Listesi](#15-hızlı-kontrol-listesi)
-
-    ## 1) Script GUID ve .meta (Kırmızı Çizgi)
-
-    Kural: `.meta` dosyasını asla kaybetme; GUID değişirse Prefab → Missing MonoBehaviour.
-
-    Kötü:
-
-    ```text
-    Script.cs (sil-yarat)
-    Script.cs.meta YOK → GUID değişir
-    ```
-
-    İyi:
-
-    ```text
-    Script.cs
-    Script.cs.meta VCS'te takipte → GUID sabit
-    ```
-
-    ---
-
-    ## 2) Field Rename (Veriyi Korumak)
-
-    Kural: Yeniden adlandırırken `FormerlySerializedAs` kullan.
-
-    Kötü:
-
-    ```csharp
-    public int myValue; // rename
-    public int myNewValue; // data kayıp
-    ```
-
-    İyi:
-
-    ```csharp
-    using UnityEngine.Serialization;
-    [FormerlySerializedAs("myValue")]
-    [SerializeField] private int myNewValue;
-    ```
-
-    ---
-
-    ## 3) Field Type Change (Tip Değiştirme)
-
-    Kural: Tipi değiştirme; yeni alan ekle, migration yap.
-
-    Kötü:
-
-    ```csharp
-    [SerializeField] int speed; // int → float
-    ```
-
-    İyi:
-
-    ```csharp
-    [SerializeField] int speedOld; // migrate source
-    [SerializeField] float speed;   // new
-
-    [ContextMenu("Migrate")]
-    void Migrate(){ if(speed==0 && speedOld!=0) speed=speedOld; }
-    ```
-
-    ---
-
-    ## 4) [SerializeField] Kaldırma (Görünmez Veri Kaybı)
-
-    Kural: Serileştirmeye devam edecek alanlardan `[SerializeField]` kaldırma.
-
-    Kötü:
-
-    ```csharp
-    private int health; // [SerializeField] kaldırıldı
-    ```
-
-    İyi:
-
-    ```csharp
-    [SerializeField] private int health; // veri korunur
-    ```
-
-    ---
-
-    ## 5) SerializeReference (İsim Sabitliği)
-
-    Kural: `[SerializeReference]` altında kullanılan tiplerin class/namespace/assembly adını değiştirme.
-
-    Örnek:
-
-    ```csharp
-    [System.Serializable] public class Attack {}
-
-    public class Player : MonoBehaviour
-    {
-        [SerializeReference] private object behavior = new Attack();
-        // Attack adını/namespace'ini değiştirme
-    }
-    ```
-
-    ---
-
-    ## 6) UnityEvent (İmza Stabilitesi)
-
-    Kural: Event parametrelerini / listener imzalarını değiştirme; inspector bağları bozulur.
-
-    Kötü:
-
-    ```csharp
-    public UnityEvent<float> onScore; // önce int'ti
-    ```
-
-    İyi:
-
-    ```csharp
-    public UnityEvent<int> onScore; // sabit imza
-    ```
-
-    ---
-
-    ## 7) Property ile Serileştirme
-
-    Kural: Unity alanları serileştirir; auto-property serileşmez. Backing field kullan.
-
-    Kötü:
-
-    ```csharp
-    public int Health { get; set; }
-    ```
-
-    İyi:
-
-    ```csharp
-    [SerializeField] private int health;
-    public int Health { get=>health; set=>health=value; }
-    ```
-
-    ---
-
-    ## 8) Prefab Referans Hijyeni
-
-    - Alanların referans verdiği child'ı silip yeniden oluşturma (ID değişir, referans kırılır).
-    - Gerekirse yalnızca rename yap veya runtime fallback ekle:
-
-    ```csharp
-    public GameObject button;
-    void Awake(){
-        if(button==null) button = transform.Find("Header/Button")?.gameObject;
-    }
-    ```
-
-    ---
-
-    ## 9) AssetReference > String Address
-
-    Kural: String key yerine `AssetReference<T>` kullan; key değişse de çalışır.
-
-    Kötü:
-
-    ```csharp
-    Addressables.InstantiateAsync("ui/main");
-    ```
-
-    İyi:
-
-    ```csharp
-    public AssetReferenceGameObject uiPrefab;
-    var handle = uiPrefab.InstantiateAsync(parent: transform);
-    ```
-
-    ---
-
-    ## 10) UI Image Sprite (Runtime Restore)
-
-    Sahnede Image.sprite koparsa, `AddressableImage` ile runtime yükle.
-
-    ```csharp
-    // Component: AddressableImage
-    // spriteReference (AssetReferenceSprite) veya addressKey ver
-    ```
-
-    ---
-
-    ## 11) AddressableLoader (Remote Catalog)
-
-    - `baseUrlRoot`: ör. `http://localhost:8000/ServerData`
-    - Platform klasörü auto-append, son versiyon auto-pick (varsayılan açık)
-    - Sadece catalog eklemek için: `labelToLoad` boş, `instantiate=false`
-    - Label ile auto-load: `labelToLoad=cdn`, `instantiate=true`
-
-    Doğrulama:
-
-    ```text
-    http://localhost:8000/ServerData/StandaloneWindows64/
-    catalog_*.json veya latest_catalog.txt görünmeli
-    ```
-
-    ---
-
-    ## 12) Hızlı HTTP Servis (Yerel)
+    ## 🚀 Özellikler
+
+    - Remote catalog loader: `AddressableLoader` ile `baseUrlRoot` + platform + version otomatik çözümleme
+    - Label-based load/instantiate: `labelToLoad` ve `instantiate` ile hızlı sahne entegrasyonu
+    - UI sprite restore: `AddressableImage` ile Image.sprite runtime’da yüklenir
+    - Version discovery: `latest_catalog.txt` veya dizin taraması ile son `catalog_*.json`
+    - Retry/backoff: Ağ hatalarında `retryCount` + exponential backoff
+    - Smart build uyumu: `SmartAddressablesBuilder` ile marker (`latest_catalog.txt`) ve düzenli klasörler
+
+    ## 📦 Kurulum
+
+    - Unity 2021.3+ (önerilen) ve `com.unity.addressables`
+    - Bu repodaki scriptler:
+      - `Assets/Scripts/AddressableLoader.cs`
+      - `Assets/Scripts/AddressableImage.cs`
+      - `Assets/Editor/SmartAddressablesBuilder.cs`
+
+    ## ⚡ Hızlı Başlangıç
+
+    1) Build (Remote) — `SmartAddressablesBuilder` ile grup/label ayarla, export et
+    2) HTTP servis:
 
     ```powershell
     cd C:\\Users\\Gultekin\\Desktop\\AdressablesFolder
     python -m http.server 8000
     ```
 
-    Unity Ayarı:
+    3) Sahne — `AddressableLoader` ekle:
 
-    - Addressables Groups → Play Mode Script: Use Existing Build (requires built groups)
-    - `AddressableLoader.baseUrlRoot` = `http://localhost:8000/ServerData`
-    - Dizin listeleme yoksa: `latest_catalog.txt` ekle (içine katalog dosya adını yaz)
+    - `baseUrlRoot = http://localhost:8000/ServerData`
+    - Sadece katalog: `labelToLoad` boş, `instantiate=false`
+    - Prefabları otomatik yükle: `labelToLoad = cdn`, `instantiate=true`
 
-    ---
+    4) UI — Image üzerinde `AddressableImage` kullan (opsiyonel)
 
-    ## 13) Diagnose & Verify (Ne Bundle'a Girdi?)
+    - `spriteReference (AssetReferenceSprite)` veya `addressKey` doldur
 
-    - Analyze → Build Layout / Bundle Layout Preview
-    - `Library/com.unity.addressables/aa/<platform>/BuildLayout.txt`
-    - Groups penceresinde Prefab entry kontrolü
+    ## 🔧 Kullanım Örnekleri
 
-    ---
+    Addressables ile Prefab instantiate (AssetReference):
 
-    ## 14) Content Update (4 Adım)
+    ```csharp
+    using UnityEngine;
+    using UnityEngine.AddressableAssets;
+    using UnityEngine.ResourceManagement.AsyncOperations;
 
-    1. Güvenli değişiklik (tercihen `FormerlySerializedAs`)
+    public class UiLoader : MonoBehaviour
+    {
+        public AssetReferenceGameObject uiPrefab;
+        AsyncOperationHandle<GameObject> _h;
+
+        void Start()
+        {
+            _h = uiPrefab.InstantiateAsync(parent: transform);
+            _h.Completed += h => {
+                if (h.Status != AsyncOperationStatus.Succeeded)
+                    Debug.LogError($"Instantiate failed: {h.OperationException}");
+            };
+        }
+
+        void OnDestroy()
+        {
+            if (_h.IsValid()) Addressables.Release(_h);
+        }
+    }
+    ```
+
+    UI Image sprite’ı runtime’da yüklemek (`AddressableImage`):
+
+    ```csharp
+    // Component: AddressableImage (Image üzerinde)
+    // spriteReference (AssetReferenceSprite) veya addressKey ver
+    ```
+
+    ## 🛡️ En İyi Pratikler (Do/Don’t)
+
+    - Script GUID: `.meta` kaybetme → GUID değişir → Missing MonoBehaviour
+    - Field Rename: `FormerlySerializedAs` kullan; doğrudan rename veri kaybettirir
+    - Field Type: Tip değiştirme — yerine yeni alan + migration
+    - [SerializeField]: Serileşecek alanlardan kaldırma
+    - SerializeReference: Class/namespace/assembly adını sabit tut
+    - UnityEvent: Parametre/imza değiştirme; inspector bağları bozulur
+    - Property: Auto-property serileşmez; backing field kullan
+    - Prefab Child: Sil-yarat yapma; rename veya runtime fallback kullan
+    - Address Key: String key yerine `AssetReference<T>` tercih et
+
+    ## 🧰 Problem Giderme (Common Errors & Fixes)
+
+    1) “Catalog URL could not be resolved.”
+
+    - `baseUrlRoot` yanlış kök: `ServerData` iki kez eklenmiş olabilir
+    - Dizin listeleme yok → `latest_catalog.txt` ekle
+    - `appendPlatformFolder/pickLatestVersion` kapatıp doğrudan katalog klasörüne işaret et
+
+    2) “Image beyaz kare”
+
+    - Sahne referansı kopuk; `AddressableImage` ile runtime yükle
+    - Prefab dependency’si build’e girmemişse label/grup ayarını kontrol et
+
+    3) “Missing MonoBehaviour”
+
+    - Script `.meta` kaybı/ GUID değişimi; VCS’te `.meta`’yı koru
+
+    4) “Label ile yüklenmedi”
+
+    - Label yanlış/kaldırılmış; Groups’ta entry’yi ve label’ı doğrula
+
+    ## 🔍 Doğrulama & Analiz
+
+    - Addressables → Analyze → Build Layout / Bundle Layout Preview
+    - Çıktı: `Library/com.unity.addressables/aa/<platform>/BuildLayout.txt`
+    - Groups penceresi: Prefab entry ve label kontrolü
+
+    ## 🔄 Content Update (Özet)
+
+    1. Güvenli değişiklik (`FormerlySerializedAs` tercih)
     2. Prepare for Content Update (content state seç)
     3. Update a Previous Build
-    4. Yeni `catalog_*.json` ve asset'leri remote'a yükle
+    4. Yeni `catalog_*.json` ve asset’leri remote’a yükle
 
-    ---
+    ## ✅ Hızlı Kontrol Listesi
 
-    ## 15) Hızlı Kontrol Listesi
-
-    - `.meta` dosyaları VCS'te mi? (GUID sabit)
-    - `FormerlySerializedAs` ile rename yapıldı mı?
+    - `.meta` VCS’te mi? (GUID sabit)
+    - `FormerlySerializedAs` kullanıldı mı?
     - `AssetReference<T>` tercih edildi mi?
-    - Prefab child referansları korunuyor mu? (sil-yarat yok)
+    - Prefab child referansları korunuyor mu?
     - Remote `catalog_*.json` erişilebilir mi?
     - Label/Group ayarları loader ile uyumlu mu?
 
